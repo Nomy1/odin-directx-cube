@@ -2,7 +2,7 @@
     "collections": [
         {
             "name": "core",
-            "path": "M:\\Languages\\odin\\core"
+            "path": ["M:\\Languages\\odin\\core", "M:\\Languages\\odin\\vendor"]
         }
     ],
     "enable_document_symbols": true,

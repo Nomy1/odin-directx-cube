@@ -8,7 +8,7 @@
          "program": "${workspaceFolder}/main.exe",
          "args": [],
          "stopAtEntry": false,
-         "cwd": "${fileDirname}",
+         "cwd": "${fileDirname}/..",
          "environment": [],
          "console": "externalTerminal"
       }

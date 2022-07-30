@@ -167,68 +167,53 @@ main :: proc() {
   }
   defer depth_stencil_state->Release()
 
-  //create constant buffer
-  Constants :: struct #align 16 {
-    transform: glm.mat4,
-    projection: glm.mat4,
-  }
-
-  constant_buffer_desc := D3D.BUFFER_DESC {
-    ByteWidth = size_of(Constants),
-    Usage = .DYNAMIC,
-    BindFlags = .CONSTANT_BUFFER,
-    CPUAccessFlags = .WRITE,
-  }
-
-  constant_buffer: ^D3D.IBuffer
-  if res := device->CreateBuffer(&constant_buffer_desc, nil, &constant_buffer); res != 0 {
-    fmt.eprintf("Unable to create constant buffer. code: 0x{0:x}", res)
-    return
-  }
-  defer constant_buffer->Release()
-
   shader: Shader
   if ok := create_shader(device, "shaders/default_shader.hlsl", &shader); !ok {
     return
   }
+  defer release_shader(&shader)
 
   meshes: [dynamic]Mesh
 
   // mesh #1
-  vertex_data := [?]Vertex {
-    Vertex{0.0, 0.5, -1.0 },  Vertex{1.0, 0.0, 0.0},
-    Vertex{0.45, -0.5, -1.0 },  Vertex{1.0, 0.0, 0.0},
-    Vertex{-0.45, -0.5, -1.0 },  Vertex{1.0, 0.0, 0.0},
+  vertex_data1 := [?]glm.vec3 {
+    glm.vec3{0.0, 0.5, -1.0 },  glm.vec3{1.0, 0.0, 0.0},
+    glm.vec3{0.45, -0.5, -1.0 },  glm.vec3{0.0, 1.0, 0.0},
+    glm.vec3{-0.45, -0.5, -1.0 },  glm.vec3{0.0, 0.0, 1.0},
   }
-  index_data := [?]u32{
+  index_data1 := [?]u32{
     0, 1, 2,
   }
+  pos1 := glm.vec3{0, 0, 4}
   mesh1: Mesh
-  if ok := create_mesh(device, &shader, vertex_data[:], index_data[:], &mesh1); !ok {
+  if ok := create_mesh(device, &shader, vertex_data1[:], index_data1[:], pos1, &mesh1); !ok {
     return
   }
+  defer release_mesh(&mesh1)
+
   append(&meshes, mesh1)
 
   // mesh #1
-  vertex_data2 := [?]Vertex {
-    Vertex{-0.2, 0.8, -1.0 },  Vertex{1.0, 0.0, 0.0},
-    Vertex{0.45, -0.5, -1.0 },  Vertex{1.0, 0.0, 0.0},
-    Vertex{-0.45, -0.5, -1.0 },  Vertex{1.0, 0.0, 0.0},
+  vertex_data2 := [?]glm.vec3 {
+    glm.vec3{0.0, 0.5, -1.0 },  glm.vec3{1.0, 0.0, 0.0},
+    glm.vec3{0.45, -0.5, -1.0 },  glm.vec3{0.0, 1.0, 0.0},
+    glm.vec3{-0.45, -0.5, -1.0 },  glm.vec3{0.0, 0.0, 1.0},
   }
   index_data2 := [?]u32{
     0, 1, 2,
   }
+  pos2 := glm.vec3{0.5, 0, 4}
   mesh2: Mesh
-  if ok := create_mesh(device, &shader, vertex_data2[:], index_data2[:], &mesh2); !ok {
+  if ok := create_mesh(device, &shader, vertex_data2[:], index_data2[:], pos2, &mesh2); !ok {
     return
   }
+  defer release_mesh(&mesh2)
+
   append(&meshes, mesh2)
 
   // 6 float x 32bit(4 bytes)
   vertex_buffer_stride := u32(6 * 4)
 	vertex_buffer_offset := u32(0)
-
-	model_translation := glm.vec3{0.0, 0.0, 4.0}
 
   // display window
   SDL.ShowWindow(window)
@@ -253,47 +238,47 @@ main :: proc() {
     }
 
     w := viewport.Width / viewport.Height
-    h := f32(1)
-    n := f32(1)
-    f := f32(9)
+      h := f32(1)
+      n := f32(1)
+      f := f32(9)
 
-    translate := glm.mat4Translate(model_translation)
-
-    mapped_subresource: D3D.MAPPED_SUBRESOURCE
-		device_context->Map(constant_buffer, 0, .WRITE_DISCARD, 0, &mapped_subresource)
-		{
-			constants := (^Constants)(mapped_subresource.pData)
-			constants.transform = translate
-			constants.projection = {
-				2 * n / w, 0,         0,           0,
-				0,         2 * n / h, 0,           0,
-				0,         0,         f / (f - n), n * f / (n - f),
-				0,         0,         1,           0,
-			}
-		}
-		device_context->Unmap(constant_buffer, 0)
-
-    device_context->ClearRenderTargetView(framebuffer_view, &[4]f32{0.6, 0.2, 0.2, 1})
+    device_context->ClearRenderTargetView(framebuffer_view, &[4]f32{0, 0, 0, 1})
     device_context->ClearDepthStencilView(depth_buffer_view, .DEPTH, 1, 0)
     
     device_context->RSSetViewports(1, &viewport)
-    device_context->VSSetConstantBuffers(0, 1, &constant_buffer)
 
-    for m in meshes {
-      m := m
+    for _, i in meshes {
+      meshes[i].position += glm.vec3{0, 0.001, 0}
+      translate := glm.mat4Translate(meshes[i].position)
+
+      mapped_subresource: D3D.MAPPED_SUBRESOURCE
+      device_context->Map(meshes[i].const_vp_buffer, 0, .WRITE_DISCARD, 0, &mapped_subresource)
+      {
+        constants := (^Const_VP)(mapped_subresource.pData)
+        constants.transform = translate
+        constants.projection = {
+          2 * n / w, 0,         0,           0,
+          0,         2 * n / h, 0,           0,
+          0,         0,         f / (f - n), n * f / (n - f),
+          0,         0,         1,           0,
+        }
+      }
+      device_context->Unmap(meshes[i].const_vp_buffer, 0)
+
+      device_context->VSSetConstantBuffers(0, 1, &meshes[i].const_vp_buffer)
+
       device_context->IASetPrimitiveTopology(.TRIANGLELIST)
-      device_context->IASetInputLayout(m.material.shader.input_layout)
-      device_context->IASetVertexBuffers(0, 1, &m.vertex_buffer, &vertex_buffer_stride, &vertex_buffer_offset)
-      device_context->IASetIndexBuffer(m.index_buffer, .R32_UINT, 0)
-      device_context->VSSetShader(m.material.shader.vertex_shader, nil, 0)
-      device_context->PSSetShader(m.material.shader.pixel_shader, nil, 0)
+      device_context->IASetInputLayout(meshes[i].material.shader.input_layout)
+      device_context->IASetVertexBuffers(0, 1, &meshes[i].vertex_buffer, &vertex_buffer_stride, &vertex_buffer_offset)
+      device_context->IASetIndexBuffer(meshes[i].index_buffer, .R32_UINT, 0)
+      device_context->VSSetShader(meshes[i].material.shader.vertex_shader, nil, 0)
+      device_context->PSSetShader(meshes[i].material.shader.pixel_shader, nil, 0)
 
       device_context->OMSetRenderTargets(1, &framebuffer_view, depth_buffer_view)
       device_context->OMSetDepthStencilState(depth_stencil_state, 0)
       
-      device_context->DrawIndexed(u32(len(m.indices)), 0, 0)
+      device_context->DrawIndexed(u32(len(meshes[i].indices)), 0, 0)
     }
-    
 
     swapchain->Present(1, 0)
   }
@@ -301,12 +286,4 @@ main :: proc() {
 
 size_of_slice :: proc($T: typeid, slice: []T) -> u32 {
   return u32(len(slice) * size_of(slice[0]))
-}
-
-RenderMaterial :: struct {
-  shader: ^Shader,
-}
-
-Vertex :: struct {
-  x, y, z: f32,
 }

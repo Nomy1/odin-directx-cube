@@ -16,11 +16,10 @@ struct vs_out {
 vs_out vs_main(vs_in input) {
 	vs_out output;
 	output.position = mul(projection, mul(transform, float4(input.position, 1.0f)));
-	//output.position = float4(0,0,0,0);
 	output.color = float4(input.color.rgb, 1);
 	return output;
 }
 
 float4 ps_main(vs_out input) : SV_TARGET {
-	return float4(1, 1, 0, 1);
+	return input.color;
 }

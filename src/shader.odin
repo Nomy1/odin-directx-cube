@@ -9,6 +9,10 @@ import glm "core:math/linalg/glsl"
 import os "core:os"
 import mem "core:mem"
 
+RenderMaterial :: struct {
+  shader: ^Shader,
+}
+
 Shader :: struct {
   input_layout: ^D3D.IInputLayout,
   vertex_shader: ^D3D.IVertexShader,
@@ -85,3 +89,8 @@ create_shader :: proc(device: ^D3D.IDevice, shader_path: cstring, shader: ^Shade
   return true
 }
 
+release_shader :: proc(shader: ^Shader) {
+  shader.input_layout->Release()
+  shader.vertex_shader->Release()
+  shader.pixel_shader->Release()
+}

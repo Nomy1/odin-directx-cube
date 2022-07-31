@@ -15,6 +15,7 @@ Mesh :: struct {
   material: RenderMaterial,
   vertices: []glm.vec3,
   position: glm.vec3,
+  rotation: glm.vec3,
   indices: []u32,
 }
 
@@ -75,6 +76,7 @@ create_mesh :: proc(device: ^D3D.IDevice, shader: ^Shader, verts: []glm.vec3, in
 
   out_mesh^ = Mesh {
     position = pos,
+    rotation = glm.vec3{0, 0, 0},
     vertices = verts,
     indices = indices,
     vertex_buffer = vertex_buffer,
@@ -86,8 +88,36 @@ create_mesh :: proc(device: ^D3D.IDevice, shader: ^Shader, verts: []glm.vec3, in
   return true
 }
 
+create_cube_mesh :: proc(device: ^D3D.IDevice, shader: ^Shader, pos: glm.vec3, out_mesh: ^Mesh) -> bool {
+  verts := [?]glm.vec3 {
+    glm.vec3{-.5, -.5, -.5 },  glm.vec3{1.0, 0.0, 0.0},
+    glm.vec3{-.5, .5, -.5 },  glm.vec3{1.0, 1.0, 0.0},
+    glm.vec3{.5, .5, -.5 },  glm.vec3{1.0, 0.0, 1.0},
+    glm.vec3{.5, -.5, -.5 },  glm.vec3{1.0, 0.0, 1.0},
+
+    glm.vec3{-.5, -.5, .5 },  glm.vec3{1.0, 0.0, 0.0},
+    glm.vec3{-.5, .5, .5 },  glm.vec3{1.0, 1.0, 0.0},
+    glm.vec3{.5, .5, .5 },  glm.vec3{1.0, 0.0, 1.0},
+    glm.vec3{.5, -.5, .5 },  glm.vec3{1.0, 0.0, 1.0},
+  }
+  indices := [?]u32 {
+    0, 1, 2, 0, 2, 3, // front
+    6, 5, 4, 6, 4, 7, // back
+    4, 5, 0, 5, 1, 0, // side
+    2, 6, 3, 3, 6, 7, // side
+    1, 5, 2, 2, 5, 6, // top
+    0, 3, 4, 4, 3, 7, // bottom
+  }
+
+  return create_mesh(device, shader, verts[:], indices[:], pos, out_mesh)
+}
+
 release_mesh :: proc(mesh: ^Mesh) {
   mesh.vertex_buffer->Release()
   mesh.index_buffer->Release()
   mesh.const_vp_buffer->Release()
+}
+
+size_of_slice :: proc($T: typeid, slice: []T) -> u32 {
+  return u32(len(slice) * size_of(slice[0]))
 }

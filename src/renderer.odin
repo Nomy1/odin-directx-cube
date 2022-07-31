@@ -165,14 +165,20 @@ render :: proc(renderer: ^Renderer, device_context: ^D3D.IDeviceContext, meshes:
   device_context->RSSetViewports(1, &viewport)
 
   for _, i in meshes {
-    meshes[i].position += glm.vec3{0, 0.001, 0}
+    meshes[i].rotation.x += 0.004
+    meshes[i].rotation.y += 0.014
+    meshes[i].rotation.z += 0.002
+
     translate := glm.mat4Translate(meshes[i].position)
+    rotate := glm.mat4Rotate(glm.vec3{1, 0, 0}, meshes[i].rotation.x)
+    rotate *= glm.mat4Rotate(glm.vec3{0, 1, 0}, meshes[i].rotation.y)
+    rotate *= glm.mat4Rotate(glm.vec3{0, 0, 1}, meshes[i].rotation.z)
 
     mapped_subresource: D3D.MAPPED_SUBRESOURCE
     device_context->Map(meshes[i].const_vp_buffer, 0, .WRITE_DISCARD, 0, &mapped_subresource)
     {
       constants := (^Const_VP)(mapped_subresource.pData)
-      constants.transform = translate
+      constants.transform = translate * rotate
       constants.projection = {
         2 * n / w, 0,         0,           0,
         0,         2 * n / h, 0,           0,

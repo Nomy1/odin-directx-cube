@@ -96,7 +96,7 @@ main :: proc() {
   }
   defer release_mesh(&mesh1)
 
-  append(&meshes, mesh1)
+  //append(&meshes, mesh1)
 
   // mesh #1
   vertex_data2 := [?]glm.vec3 {
@@ -114,28 +114,33 @@ main :: proc() {
   }
   defer release_mesh(&mesh2)
 
-  append(&meshes, mesh2)
+  //append(&meshes, mesh2)
+
+  cube_mesh: Mesh
+  if ok := create_cube_mesh(device, &shader, glm.vec3{0.0, -0.0, 3}, &cube_mesh); !ok {
+    return
+  }
+  defer release_mesh(&cube_mesh)
+
+  append(&meshes, cube_mesh)
 
   // display window
   SDL.ShowWindow(window)
 
   // game loop
   for quit := false; !quit; {
+    // update from input
     for e: SDL.Event; SDL.PollEvent(&e); {
       #partial switch(e.type) {
-        case .QUIT:
-          quit = true
+        case .QUIT: quit = true
         case .KEYDOWN:
-          if e.key.keysym.sym == .ESCAPE {
-            quit = true
+          #partial switch(e.key.keysym.sym) {
+            case .ESCAPE: quit = true
           }
       }
     }
 
+    // update screen
     render(&renderer, device_context, meshes[:])
   }
-}
-
-size_of_slice :: proc($T: typeid, slice: []T) -> u32 {
-  return u32(len(slice) * size_of(slice[0]))
 }
